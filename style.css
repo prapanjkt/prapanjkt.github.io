@@ -640,3 +640,9 @@ footer {
     }
 
 }
+
+.blog-preview {
+    color: #999999;
+    margin-top: 15px;
+    line-height: 1.7;
+}
