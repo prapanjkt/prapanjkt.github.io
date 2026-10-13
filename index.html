@@ -246,9 +246,11 @@
                         ${date}
                     </p>
 
-                    <h3>
-                        ${escapeHTML(post.title)}
-                    </h3>
+<h3>
+    <a href="post.html?id=${encodeURIComponent(post.id)}">
+        ${escapeHTML(post.title)}
+    </a>
+</h3>
 
                     <p>
                         ${escapeHTML(
