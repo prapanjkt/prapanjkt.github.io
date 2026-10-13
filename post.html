@@ -1,0 +1,98 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog | Prapanj K T</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="logo">Prapanj</div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="index.html#about">About Me</a>
+            <a href="index.html#blog">Blog</a>
+            <a href="index.html#contact">Contact</a>
+        </div>
+    </nav>
+
+    <main class="blog-page">
+        <p class="blog-date" id="post-date"></p>
+        <h1 id="post-title">Loading blog...</h1>
+        <p class="blog-subtitle" id="post-subtitle"></p>
+        <article id="post-content"></article>
+        <a href="index.html#blog" class="button">← Back to Blog</a>
+        <p id="post-error"></p>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL =
+            "https://jgafjlpkdfamvoywggtt.supabase.co";
+
+        const SUPABASE_PUBLISHABLE_KEY =
+            "sb_publishable_QF5kwYRijdV_0xNomd3LWw_893w-ND2";
+
+        const supabaseClient = window.supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_PUBLISHABLE_KEY
+        );
+
+        function addText(parent, text) {
+            parent.textContent = text || "";
+        }
+
+        async function loadPost() {
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get("id");
+            const errorBox = document.getElementById("post-error");
+
+            if (!id || !/^\d+$/.test(id)) {
+                addText(errorBox, "Invalid blog link.");
+                document.getElementById("post-title").textContent = "Blog not found";
+                return;
+            }
+
+            const { data, error } = await supabaseClient
+                .from("posts")
+                .select("id, title, subtitle, content, created_at")
+                .eq("id", id)
+                .eq("published", true)
+                .maybeSingle();
+
+            if (error || !data) {
+                document.getElementById("post-title").textContent = "Blog not found";
+                addText(errorBox, "This blog may not exist or may no longer be published.");
+                return;
+            }
+
+            document.title = data.title + " | Prapanj K T";
+            addText(document.getElementById("post-title"), data.title);
+            addText(document.getElementById("post-subtitle"), data.subtitle);
+
+            document.getElementById("post-date").textContent =
+                new Date(data.created_at).toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric"
+                });
+
+            // Display the full post as plain text, preserving line breaks.
+            const content = document.getElementById("post-content");
+            content.replaceChildren();
+
+            data.content.split(/\r?\n/).forEach(function(line) {
+                const paragraph = document.createElement("p");
+                paragraph.textContent = line || "\u00a0";
+                content.appendChild(paragraph);
+            });
+        }
+
+        loadPost();
+    </script>
+</body>
+</html>
+```
