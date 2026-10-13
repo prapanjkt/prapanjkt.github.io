@@ -646,3 +646,25 @@ footer {
     margin-top: 15px;
     line-height: 1.7;
 }
+
+.blog-card h3 a {
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.blog-card h3 a:hover {
+    color: #aaaaaa;
+    text-decoration: underline;
+}
+
+#post-content {
+    margin-bottom: 40px;
+}
+
+#post-content p {
+    font-size: 19px;
+    line-height: 1.9;
+    color: #cccccc;
+    margin-bottom: 22px;
+    overflow-wrap: anywhere;
+}
