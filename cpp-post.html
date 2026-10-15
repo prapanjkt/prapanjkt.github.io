@@ -1,0 +1,129 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C++ Code | Prapanj K T</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="logo">Prapanj</div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="index.html#cpp">Daily C++ Code</a>
+            <a href="index.html#blog">Blog</a>
+            <a href="index.html#contact">Contact</a>
+        </div>
+    </nav>
+
+    <main class="blog-page">
+        <p class="blog-date" id="cpp-date"></p>
+        <h1 id="cpp-title">Loading C++ post...</h1>
+
+        <section id="cpp-problem-section">
+            <h2>Problem</h2>
+            <div id="cpp-problem"></div>
+        </section>
+
+        <section id="cpp-code-section">
+            <h2>Solution</h2>
+            <pre><code id="cpp-code"></code></pre>
+        </section>
+
+        <section id="cpp-explanation-section">
+            <h2>Explanation</h2>
+            <div id="cpp-explanation"></div>
+        </section>
+
+        <p id="cpp-error"></p>
+        <a href="index.html#cpp" class="button">← Back to Daily C++ Code</a>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL =
+            "https://jgafjlpkdfamvoywggtt.supabase.co";
+
+        const SUPABASE_PUBLISHABLE_KEY =
+            "sb_publishable_QF5kwYRijdV_0xNomd3LWw_893w-ND2";
+
+        const supabaseClient = window.supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_PUBLISHABLE_KEY
+        );
+
+        function showTextLines(element, text) {
+            element.replaceChildren();
+
+            (text || "").split(/\r?\n/).forEach(function(line) {
+                const paragraph = document.createElement("p");
+                paragraph.textContent = line || "\u00a0";
+                element.appendChild(paragraph);
+            });
+        }
+
+        async function loadCppPost() {
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get("id");
+            const errorBox = document.getElementById("cpp-error");
+
+            if (!id || !/^\d+$/.test(id)) {
+                document.getElementById("cpp-title").textContent =
+                    "C++ post not found";
+                errorBox.textContent = "Invalid C++ post link.";
+                return;
+            }
+
+            const { data, error } = await supabaseClient
+                .from("cpp_posts")
+                .select("id, title, problem, code, explanation, created_at")
+                .eq("id", id)
+                .eq("published", true)
+                .maybeSingle();
+
+            if (error || !data) {
+                document.getElementById("cpp-title").textContent =
+                    "C++ post not found";
+                errorBox.textContent =
+                    "This post may not exist or may not be published.";
+                console.error("Unable to load C++ post:", error);
+                return;
+            }
+
+            document.title = data.title + " | Daily C++ Code";
+
+            document.getElementById("cpp-title").textContent = data.title;
+
+            document.getElementById("cpp-date").textContent =
+                new Date(data.created_at).toLocaleDateString("en-IN", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric"
+                });
+
+            showTextLines(
+                document.getElementById("cpp-problem"),
+                data.problem
+            );
+
+            document.getElementById("cpp-code").textContent = data.code || "";
+
+            showTextLines(
+                document.getElementById("cpp-explanation"),
+                data.explanation
+            );
+
+            document.getElementById("cpp-problem-section").hidden =
+                !data.problem;
+
+            document.getElementById("cpp-explanation-section").hidden =
+                !data.explanation;
+        }
+
+        loadCppPost();
+    </script>
+</body>
+</html>
