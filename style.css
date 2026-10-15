@@ -668,3 +668,28 @@ footer {
     margin-bottom: 22px;
     overflow-wrap: anywhere;
 }
+
+
+/* Daily C++ Code page */
+
+.blog-page pre {
+    background: #151515;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 22px;
+    overflow-x: auto;
+    margin: 20px 0 35px;
+}
+
+.blog-page pre code {
+    color: #d6e6ff;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 15px;
+    line-height: 1.7;
+    white-space: pre;
+}
+
+.blog-page section h2 {
+    margin-top: 35px;
+    margin-bottom: 15px;
+}
