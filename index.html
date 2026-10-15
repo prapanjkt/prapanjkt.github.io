@@ -24,15 +24,16 @@
             Prapanj
         </div>
 
-<div class="nav-links">
 
+<div class="nav-links">
     <a href="#home">Home</a>
     <a href="#about">About Me</a>
+    <a href="#cpp">Daily C++ Code</a>
     <a href="#blog">Blog</a>
     <a href="#contact">Contact</a>
     <a href="admin.html">Admin</a>
-
 </div>
+
 
     </nav>
 
@@ -90,6 +91,22 @@
 
     </section>
 
+
+<!-- Daily C++ Code -->
+
+<section id="cpp" class="content-section">
+
+    <h2>Daily C++ Code</h2>
+
+    <p class="blog-intro">
+        My daily C++ coding practice, problems, solutions, and explanations.
+    </p>
+
+    <div id="cpp-list">
+        <p>Loading C++ posts...</p>
+    </div>
+
+</section>
 
 
     <!-- Blog -->
@@ -291,6 +308,59 @@
         loadPublishedPosts();
 
     </script>
+
+
+<script>
+    async function loadCppPosts() {
+        const cppList = document.getElementById("cpp-list");
+
+        const { data, error } = await supabaseClient
+            .from("cpp_posts")
+            .select("id, title, problem, explanation, code, created_at")
+            .eq("published", true)
+            .order("created_at", { ascending: false });
+
+        if (error) {
+            cppList.textContent = "Unable to load C++ posts.";
+            console.error("C++ posts error:", error);
+            return;
+        }
+
+        if (!data || data.length === 0) {
+            cppList.textContent = "No C++ posts yet. Check back soon.";
+            return;
+        }
+
+        cppList.replaceChildren();
+
+        data.forEach(function(post) {
+            const card = document.createElement("div");
+            card.className = "blog-card";
+
+            const date = document.createElement("p");
+            date.className = "blog-date";
+            date.textContent = new Date(post.created_at).toLocaleDateString(
+                "en-IN",
+                { day: "numeric", month: "long", year: "numeric" }
+            );
+
+            const heading = document.createElement("h3");
+            const link = document.createElement("a");
+            link.href = "cpp-post.html?id=" + encodeURIComponent(post.id);
+            link.textContent = post.title;
+            heading.appendChild(link);
+
+            const preview = document.createElement("p");
+            preview.className = "blog-preview";
+            preview.textContent = post.problem || post.explanation || "";
+
+            card.append(date, heading, preview);
+            cppList.appendChild(card);
+        });
+    }
+
+    loadCppPosts();
+</script>
 
 
 </body>
