@@ -4,64 +4,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Definitions | Prapanj K T</title>
+    <title>Definitions | Prapanj</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-    <nav class="navbar">
-        <div class="logo">Prapanj</div>
-        <div class="nav-links">
-            <a href="index.html">Home</a>
-            <a href="index.html#about">About Me</a>
-            <a href="definitions.html">Definitions</a>
-            <a href="index.html#contact">Contact</a>
-            <a href="admin.html">Admin</a>
-        </div>
-    </nav>
-
-    <main class="blog-page">
+    <main class="dashboard-page">
+        <p class="intro">Prapanj</p>
         <h1>Definitions</h1>
-        <p class="blog-intro">
-            A collection of concepts, definitions, and notes.
-        </p>
+        <p>Explore notes, concepts and learning resources.</p>
 
-        <div id="folder-list" class="definition-folders">
-            <p>Loading folders...</p>
+        <div class="definition-folders">
+            <a class="definition-folder" href="cpp-folder.html">
+                <span class="folder-icon">📁</span>
+                <h2>C++</h2>
+                <p>C++ concepts, coding problems, solutions and explanations.</p>
+            </a>
         </div>
+
+        <p><a href="index.html">← Back to Home</a></p>
     </main>
-
-    <script>
-        const folders = [
-            {
-                name: "C++",
-                description: "C++ concepts, coding problems, solutions, and explanations.",
-                link: "cpp-folder.html"
-            }
-        ];
-
-        const folderList = document.getElementById("folder-list");
-        folderList.replaceChildren();
-
-        folders.forEach(function(folder) {
-            const card = document.createElement("a");
-            card.className = "definition-folder";
-            card.href = folder.link;
-
-            const icon = document.createElement("span");
-            icon.className = "folder-icon";
-            icon.textContent = "📁";
-
-            const title = document.createElement("h2");
-            title.textContent = folder.name;
-
-            const description = document.createElement("p");
-            description.textContent = folder.description;
-
-            card.append(icon, title, description);
-            folderList.appendChild(card);
-        });
-    </script>
-
 </body>
 </html>
