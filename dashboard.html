@@ -13,9 +13,9 @@
 
     <div class="dashboard-header">
         <div>
-            <p class="intro">Prapanj Blog & C++</p>
+            <p class="intro">Prapanj Admin</p>
             <h1>Dashboard</h1>
-            <p>Manage your blog and daily C++ practice.</p>
+            <p>Manage your blog and definitions.</p>
             
 <div id="admin-home" class="admin-home">
     <h2>What do you want to manage?</h2>
@@ -29,10 +29,10 @@
         </button>
 
         <button type="button" class="admin-folder"
-                onclick="openWorkspace('cpp')">
+                onclick="openWorkspace('definitions')">
             <span class="admin-folder-icon">📁</span>
             <strong>Definitions</strong>
-            <span>Manage C++ notes, problems and solutions.</span>
+            <span>Create and manage folders such as C++, Optics and Electronics.</span>
         </button>
     </div>
 </div>
@@ -76,6 +76,44 @@
 
     <hr>
 </div>
+    <div id="definitions-workspace" hidden>
+        <button type="button" class="button"
+                onclick="showAdminHome()">← Back to dashboard</button>
+
+        <section class="editor-box">
+            <h2 id="folder-editor-title">Add a Definitions Folder</h2>
+
+            <label for="folder-name-input">Folder name</label>
+            <input id="folder-name-input" type="text" placeholder="Example: Optics">
+
+            <label for="folder-slug-input">Folder slug (URL name)</label>
+            <input id="folder-slug-input" type="text" placeholder="Example: optics">
+
+            <label for="folder-description-input">Description</label>
+            <textarea id="folder-description-input"
+                      placeholder="What will this folder contain?"></textarea>
+
+            <label>
+                <input id="folder-published-input" type="checkbox" checked>
+                Show this folder on the public Definitions page
+            </label>
+
+            <div class="editor-buttons">
+                <button id="folder-save-button" class="button" type="button">Save Folder</button>
+                <button id="folder-cancel-button" class="button" type="button" hidden>Cancel Edit</button>
+            </div>
+            <p id="folder-status" role="status"></p>
+        </section>
+
+        <section class="posts-section">
+            <h2>Definitions Folders</h2>
+            <p>Open C++ to manage your existing C++ problems and solutions.</p>
+            <div id="definitions-folders-list">
+                <p>Loading folders...</p>
+            </div>
+        </section>
+    </div>
+
     <div id="cpp-workspace" hidden>
     <button type="button" class="button"
             onclick="showAdminHome()">← Back to folders</button>
@@ -127,14 +165,17 @@
 function openWorkspace(section) {
     document.getElementById("admin-home").hidden = true;
     document.getElementById("blog-workspace").hidden = section !== "blog";
+    document.getElementById("definitions-workspace").hidden = section !== "definitions";
     document.getElementById("cpp-workspace").hidden = section !== "cpp";
 
+    if (section === "definitions") loadDefinitionFolders();
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function showAdminHome() {
     document.getElementById("admin-home").hidden = false;
     document.getElementById("blog-workspace").hidden = true;
+    document.getElementById("definitions-workspace").hidden = true;
     document.getElementById("cpp-workspace").hidden = true;
 
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -157,9 +198,12 @@ const blogStatus = document.getElementById("blog-status");
 const cppStatus = document.getElementById("cpp-status");
 const postsList = document.getElementById("posts-list");
 const cppPostsList = document.getElementById("cpp-posts-list");
+const folderStatus = document.getElementById("folder-status");
+const foldersList = document.getElementById("definitions-folders-list");
 
 let editingBlogId = null;
 let editingCppId = null;
+let editingFolderId = null;
 
 
 // --------------------------------------------------
@@ -541,6 +585,159 @@ function clearCppEditor() {
 
 
 // --------------------------------------------------
+// DEFINITIONS FOLDERS: LOAD, CREATE, EDIT AND DELETE
+// --------------------------------------------------
+
+async function loadDefinitionFolders() {
+    foldersList.replaceChildren(createElement("p", "", "Loading folders..."));
+
+    const { data, error } = await supabaseClient
+        .from("definitions_folders")
+        .select("*")
+        .order("name", { ascending: true });
+
+    if (error) {
+        foldersList.replaceChildren(
+            createElement("p", "", "Error loading folders: " + error.message)
+        );
+        return;
+    }
+
+    if (!data || data.length === 0) {
+        foldersList.replaceChildren(
+            createElement("p", "", "No folders yet. Use the form above to create one.")
+        );
+        return;
+    }
+
+    foldersList.replaceChildren();
+
+    data.forEach(function(folder) {
+        const card = createElement("div", "dashboard-post-card");
+        const info = createElement("div", "dashboard-post-info");
+        const actions = createElement("div", "dashboard-post-actions");
+
+        info.appendChild(createElement("h3", "", folder.name));
+        info.appendChild(createElement("p", "", folder.description || ""));
+        info.appendChild(createElement("p", "", "Slug: " + folder.slug));
+        info.appendChild(createElement(
+            "span",
+            "post-status",
+            folder.published ? "Visible on public page" : "Hidden from public page"
+        ));
+
+        actions.appendChild(makeButton("Open", "view-cpp-button", function() {
+            if (folder.slug === "cpp") {
+                openWorkspace("cpp");
+            } else {
+                alert("The folder is saved, but its content editor is not configured yet. C++ is currently connected to the existing C++ editor.");
+            }
+        }));
+
+        actions.appendChild(makeButton("Edit", "edit-post-button", function() {
+            editDefinitionFolder(folder);
+        }));
+
+        actions.appendChild(makeButton("Delete", "delete-post-button", function() {
+            deleteDefinitionFolder(folder.id, folder.name);
+        }));
+
+        card.append(info, actions);
+        foldersList.appendChild(card);
+    });
+}
+
+function editDefinitionFolder(folder) {
+    editingFolderId = String(folder.id);
+    document.getElementById("folder-name-input").value = folder.name || "";
+    document.getElementById("folder-slug-input").value = folder.slug || "";
+    document.getElementById("folder-description-input").value = folder.description || "";
+    document.getElementById("folder-published-input").checked = Boolean(folder.published);
+    document.getElementById("folder-editor-title").textContent = "Edit Definitions Folder";
+    document.getElementById("folder-cancel-button").hidden = false;
+    folderStatus.textContent = "Editing folder.";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function saveDefinitionFolder() {
+    const name = document.getElementById("folder-name-input").value.trim();
+    const slug = document.getElementById("folder-slug-input").value.trim()
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, "")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+    const description = document.getElementById("folder-description-input").value.trim();
+    const published = document.getElementById("folder-published-input").checked;
+
+    if (!name || !slug) {
+        folderStatus.textContent = "Please enter a folder name and a valid URL slug.";
+        return;
+    }
+
+    folderStatus.textContent = "Saving folder...";
+
+    const folder = { name, slug, description, published };
+    let result;
+
+    if (editingFolderId !== null) {
+        result = await supabaseClient
+            .from("definitions_folders")
+            .update(folder)
+            .eq("id", editingFolderId);
+    } else {
+        result = await supabaseClient
+            .from("definitions_folders")
+            .insert(folder);
+    }
+
+    if (result.error) {
+        folderStatus.textContent = "Error saving folder: " + result.error.message;
+        return;
+    }
+
+    folderStatus.textContent = editingFolderId !== null
+        ? "Folder updated successfully."
+        : "Folder created successfully.";
+
+    clearDefinitionFolderEditor();
+    await loadDefinitionFolders();
+}
+
+async function deleteDefinitionFolder(id, name) {
+    if (name === "C++" || name.toLowerCase() === "c++") {
+        if (!confirm("Delete the C++ folder from the Definitions list? This does not delete your C++ posts, but it may remove the public folder link. Continue?")) return;
+    } else if (!confirm("Permanently delete the folder '" + name + "'?")) {
+        return;
+    }
+
+    const { error } = await supabaseClient
+        .from("definitions_folders")
+        .delete()
+        .eq("id", id);
+
+    if (error) {
+        folderStatus.textContent = "Error deleting folder: " + error.message;
+        return;
+    }
+
+    folderStatus.textContent = "Folder deleted.";
+    if (editingFolderId === String(id)) clearDefinitionFolderEditor();
+    await loadDefinitionFolders();
+}
+
+function clearDefinitionFolderEditor() {
+    editingFolderId = null;
+    document.getElementById("folder-name-input").value = "";
+    document.getElementById("folder-slug-input").value = "";
+    document.getElementById("folder-description-input").value = "";
+    document.getElementById("folder-published-input").checked = true;
+    document.getElementById("folder-editor-title").textContent = "Add a Definitions Folder";
+    document.getElementById("folder-cancel-button").hidden = true;
+}
+
+
+// --------------------------------------------------
 // BUTTON EVENTS
 // --------------------------------------------------
 
@@ -578,6 +775,23 @@ document.getElementById("cpp-cancel-button").addEventListener("click", function(
     cppStatus.textContent = "";
 });
 
+document.getElementById("folder-save-button").addEventListener("click", saveDefinitionFolder);
+
+document.getElementById("folder-cancel-button").addEventListener("click", function() {
+    clearDefinitionFolderEditor();
+    folderStatus.textContent = "";
+});
+
+document.getElementById("folder-name-input").addEventListener("input", function() {
+    if (editingFolderId !== null) return;
+    const slugInput = document.getElementById("folder-slug-input");
+    slugInput.value = this.value
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+});
+
 document.getElementById("logout-button").addEventListener("click", async function() {
     await supabaseClient.auth.signOut();
     window.location.href = "admin.html";
@@ -594,7 +808,8 @@ async function startDashboard() {
 
     await Promise.all([
         loadPosts(),
-        loadCppPosts()
+        loadCppPosts(),
+        loadDefinitionFolders()
     ]);
 }
 
