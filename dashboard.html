@@ -16,6 +16,27 @@
             <p class="intro">Prapanj Blog & C++</p>
             <h1>Dashboard</h1>
             <p>Manage your blog and daily C++ practice.</p>
+            
+<div id="admin-home" class="admin-home">
+    <h2>What do you want to manage?</h2>
+
+    <div class="admin-folder-grid">
+        <button type="button" class="admin-folder"
+                onclick="openWorkspace('blog')">
+            <span class="admin-folder-icon">📁</span>
+            <strong>Blog</strong>
+            <span>Create, edit and publish blog posts.</span>
+        </button>
+
+        <button type="button" class="admin-folder"
+                onclick="openWorkspace('cpp')">
+            <span class="admin-folder-icon">📁</span>
+            <strong>Definitions</strong>
+            <span>Manage C++ notes, problems and solutions.</span>
+        </button>
+    </div>
+</div>
+
         </div>
         <button id="logout-button" type="button">Logout</button>
     </div>
