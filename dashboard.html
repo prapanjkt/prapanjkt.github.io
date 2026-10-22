@@ -40,7 +40,9 @@
         </div>
         <button id="logout-button" type="button">Logout</button>
     </div>
-
+<div id="blog-workspace" hidden>
+    <button type="button" class="button"
+            onclick="showAdminHome()">← Back to folders</button>
     <!-- BLOG EDITOR -->
     <section class="editor-box">
         <h2 id="blog-editor-title">Write a new blog</h2>
@@ -73,7 +75,10 @@
     </section>
 
     <hr>
-
+</div>
+    <div id="cpp-workspace" hidden>
+    <button type="button" class="button"
+            onclick="showAdminHome()">← Back to folders</button>
     <!-- C++ EDITOR -->
     <section class="editor-box">
         <h2 id="cpp-editor-title">Add Daily C++ Code</h2>
@@ -112,12 +117,28 @@
             <p>Loading C++ posts...</p>
         </div>
     </section>
-
+</div>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 "use strict";
+
+function openWorkspace(section) {
+    document.getElementById("admin-home").hidden = true;
+    document.getElementById("blog-workspace").hidden = section !== "blog";
+    document.getElementById("cpp-workspace").hidden = section !== "cpp";
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function showAdminHome() {
+    document.getElementById("admin-home").hidden = false;
+    document.getElementById("blog-workspace").hidden = true;
+    document.getElementById("cpp-workspace").hidden = true;
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
 
 const SUPABASE_URL =
     "https://jgafjlpkdfamvoywggtt.supabase.co";
