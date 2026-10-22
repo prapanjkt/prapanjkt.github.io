@@ -121,6 +121,40 @@
         </section>
     </div>
 
+    <div id="definition-content-workspace" hidden>
+        <button type="button" class="button" onclick="openWorkspace('definitions')">← Back to Definitions folders</button>
+
+        <section class="editor-box">
+            <h2 id="definition-content-heading">Folder content</h2>
+            <p id="definition-content-description"></p>
+            <h3 id="definition-entry-editor-title">Add an entry</h3>
+
+            <label for="definition-entry-title">Title</label>
+            <input id="definition-entry-title" type="text" placeholder="Enter a title">
+
+            <label for="definition-entry-content">Content</label>
+            <textarea id="definition-entry-content" rows="12" placeholder="Write your definition or notes here..."></textarea>
+
+            <label>
+                <input id="definition-entry-published" type="checkbox">
+                Publish this entry on the public website
+            </label>
+
+            <div class="editor-buttons">
+                <button id="definition-entry-draft-button" class="button" type="button">Save Draft</button>
+                <button id="definition-entry-publish-button" class="button" type="button">Publish</button>
+                <button id="definition-entry-private-button" class="button" type="button">Save Private</button>
+                <button id="definition-entry-cancel-button" class="button" type="button" hidden>Cancel Edit</button>
+            </div>
+            <p id="definition-entry-status" role="status"></p>
+        </section>
+
+        <section class="posts-section">
+            <h2>Entries in this folder</h2>
+            <div id="definition-entries-list"><p>Loading entries...</p></div>
+        </section>
+    </div>
+
     <div id="cpp-workspace" hidden>
     <button type="button" class="button"
             onclick="showAdminHome()">← Back to folders</button>
@@ -173,6 +207,7 @@ function openWorkspace(section) {
     document.getElementById("admin-home").hidden = true;
     document.getElementById("blog-workspace").hidden = section !== "blog";
     document.getElementById("definitions-workspace").hidden = section !== "definitions";
+    document.getElementById("definition-content-workspace").hidden = section !== "definition-content";
     document.getElementById("cpp-workspace").hidden = section !== "cpp";
 
     if (section === "definitions") loadDefinitionFolders();
@@ -183,6 +218,7 @@ function showAdminHome() {
     document.getElementById("admin-home").hidden = false;
     document.getElementById("blog-workspace").hidden = true;
     document.getElementById("definitions-workspace").hidden = true;
+    document.getElementById("definition-content-workspace").hidden = true;
     document.getElementById("cpp-workspace").hidden = true;
 
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -207,10 +243,14 @@ const postsList = document.getElementById("posts-list");
 const cppPostsList = document.getElementById("cpp-posts-list");
 const folderStatus = document.getElementById("folder-status");
 const foldersList = document.getElementById("definitions-folders-list");
+const definitionEntryStatus = document.getElementById("definition-entry-status");
+const definitionEntriesList = document.getElementById("definition-entries-list");
 
 let editingBlogId = null;
 let editingCppId = null;
 let editingFolderId = null;
+let activeDefinitionFolder = null;
+let editingDefinitionEntryId = null;
 
 
 // --------------------------------------------------
@@ -637,7 +677,7 @@ async function loadDefinitionFolders() {
             if (folder.slug === "cpp") {
                 openWorkspace("cpp");
             } else {
-                alert("The folder is saved, but its content editor is not configured yet. C++ is currently connected to the existing C++ editor.");
+                openDefinitionContent(folder);
             }
         }));
 
@@ -745,6 +785,141 @@ function clearDefinitionFolderEditor() {
 
 
 // --------------------------------------------------
+// GENERIC DEFINITIONS FOLDER CONTENT
+// Requires the public.definition_entries table (SQL provided separately).
+// --------------------------------------------------
+
+async function openDefinitionContent(folder) {
+    activeDefinitionFolder = folder;
+    clearDefinitionEntryEditor();
+    document.getElementById("definition-content-heading").textContent = folder.name;
+    document.getElementById("definition-content-description").textContent = folder.description || "";
+    document.getElementById("definition-entry-editor-title").textContent = "Add to " + folder.name;
+    document.getElementById("admin-home").hidden = true;
+    document.getElementById("blog-workspace").hidden = true;
+    document.getElementById("definitions-workspace").hidden = true;
+    document.getElementById("definition-content-workspace").hidden = false;
+    document.getElementById("cpp-workspace").hidden = true;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    await loadDefinitionEntries();
+}
+
+async function loadDefinitionEntries() {
+    if (!activeDefinitionFolder) return;
+    definitionEntriesList.replaceChildren(createElement("p", "", "Loading entries..."));
+
+    const { data, error } = await supabaseClient
+        .from("definition_entries")
+        .select("*")
+        .eq("folder_id", activeDefinitionFolder.id)
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        definitionEntriesList.replaceChildren(createElement(
+            "p", "", "Error loading entries: " + error.message +
+            ". Check that you have created the definition_entries table using the SQL instructions."
+        ));
+        return;
+    }
+
+    if (!data || data.length === 0) {
+        definitionEntriesList.replaceChildren(createElement("p", "", "No entries yet. Use the form above to add one."));
+        return;
+    }
+
+    definitionEntriesList.replaceChildren();
+    data.forEach(function(entry) {
+        const card = createElement("div", "dashboard-post-card");
+        const info = createElement("div", "dashboard-post-info");
+        const actions = createElement("div", "dashboard-post-actions");
+        info.appendChild(createElement("h3", "", entry.title));
+        const preview = (entry.content || "").slice(0, 180);
+        info.appendChild(createElement("p", "", preview + ((entry.content || "").length > 180 ? "…" : "")));
+        info.appendChild(createElement("span", "post-status", entry.published ? "Published" : "Draft / Private"));
+        actions.appendChild(makeButton("Edit", "edit-post-button", function() {
+            editDefinitionEntry(entry);
+        }));
+        actions.appendChild(makeButton("Delete", "delete-post-button", function() {
+            deleteDefinitionEntry(entry.id, entry.title);
+        }));
+        card.append(info, actions);
+        definitionEntriesList.appendChild(card);
+    });
+}
+
+function editDefinitionEntry(entry) {
+    editingDefinitionEntryId = String(entry.id);
+    document.getElementById("definition-entry-title").value = entry.title || "";
+    document.getElementById("definition-entry-content").value = entry.content || "";
+    document.getElementById("definition-entry-published").checked = Boolean(entry.published);
+    document.getElementById("definition-entry-editor-title").textContent = "Edit entry";
+    document.getElementById("definition-entry-cancel-button").hidden = false;
+    definitionEntryStatus.textContent = "Editing entry.";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function saveDefinitionEntry(published) {
+    if (!activeDefinitionFolder) {
+        definitionEntryStatus.textContent = "Open a folder first.";
+        return;
+    }
+    const title = document.getElementById("definition-entry-title").value.trim();
+    const content = document.getElementById("definition-entry-content").value.trim();
+    if (!title || !content) {
+        definitionEntryStatus.textContent = "Please enter both a title and content.";
+        return;
+    }
+
+    definitionEntryStatus.textContent = "Saving entry...";
+    const entry = {
+        folder_id: activeDefinitionFolder.id,
+        title: title,
+        content: content,
+        published: published
+    };
+
+    let result;
+    if (editingDefinitionEntryId !== null) {
+        result = await supabaseClient.from("definition_entries")
+            .update(entry).eq("id", editingDefinitionEntryId);
+    } else {
+        result = await supabaseClient.from("definition_entries").insert(entry);
+    }
+
+    if (result.error) {
+        definitionEntryStatus.textContent = "Error saving entry: " + result.error.message;
+        return;
+    }
+
+    definitionEntryStatus.textContent = published ? "Entry published." : "Entry saved as a draft/private entry.";
+    clearDefinitionEntryEditor();
+    await loadDefinitionEntries();
+}
+
+async function deleteDefinitionEntry(id, title) {
+    if (!confirm("Permanently delete the entry '" + title + "'?")) return;
+    const { error } = await supabaseClient.from("definition_entries").delete().eq("id", id);
+    if (error) {
+        definitionEntryStatus.textContent = "Error deleting entry: " + error.message;
+        return;
+    }
+    definitionEntryStatus.textContent = "Entry deleted.";
+    if (editingDefinitionEntryId === String(id)) clearDefinitionEntryEditor();
+    await loadDefinitionEntries();
+}
+
+function clearDefinitionEntryEditor() {
+    editingDefinitionEntryId = null;
+    document.getElementById("definition-entry-title").value = "";
+    document.getElementById("definition-entry-content").value = "";
+    document.getElementById("definition-entry-published").checked = false;
+    document.getElementById("definition-entry-editor-title").textContent =
+        activeDefinitionFolder ? "Add to " + activeDefinitionFolder.name : "Add an entry";
+    document.getElementById("definition-entry-cancel-button").hidden = true;
+}
+
+
+// --------------------------------------------------
 // BUTTON EVENTS
 // --------------------------------------------------
 
@@ -780,6 +955,20 @@ document.getElementById("cpp-private-button").addEventListener("click", function
 document.getElementById("cpp-cancel-button").addEventListener("click", function() {
     clearCppEditor();
     cppStatus.textContent = "";
+});
+
+document.getElementById("definition-entry-draft-button").addEventListener("click", function() {
+    saveDefinitionEntry(false);
+});
+document.getElementById("definition-entry-publish-button").addEventListener("click", function() {
+    saveDefinitionEntry(true);
+});
+document.getElementById("definition-entry-private-button").addEventListener("click", function() {
+    saveDefinitionEntry(false);
+});
+document.getElementById("definition-entry-cancel-button").addEventListener("click", function() {
+    clearDefinitionEntryEditor();
+    definitionEntryStatus.textContent = "";
 });
 
 document.getElementById("folder-save-button").addEventListener("click", saveDefinitionFolder);
